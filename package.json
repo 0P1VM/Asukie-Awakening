@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "cpu-stat": "^2.0.1",
+    "discord.js": "^14.19.3",
+    "dotenv": "^16.5.0",
+    "moment": "^2.30.1",
+    "node-fetch": "^2.7.0",
+    "quick.db": "^9.1.7",
+    "weather-js": "^2.0.0"
+  }
+}
