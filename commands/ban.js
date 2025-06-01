@@ -1,135 +1,130 @@
 const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
   EmbedBuilder,
-  PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ComponentType
 } = require('discord.js');
-const config = require('../config.json');
 
-exports.run = async (client, message, args) => {
-  if (!message.guild || message.author.bot) return;
-  await message.delete().catch(() => {});
-
-  const noPermEmbed = new EmbedBuilder()
-    .setDescription(`<a:Bnao:746212123901820929> | Você não tem permissão para banir este usuário.`)
-    .setColor(`#8500de`)
-    .setFooter({ text: `Comando requisitado por: ${message.author.username}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) });
-
-  if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-    return message.channel.send({
-      content: `<a:Bnao:746212123901820929> | Desculpe, ${message.author}, você precisa da permissão **Banir Membros** para executar este comando.`
-    });
-  }
-
-  if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.BanMembers)) {
-    return message.channel.send({
-      content: `<a:Bnao:746212123901820929> | Oops! Eu preciso da permissão **Banir Membros** para executar este comando.`
-    });
-  }
-
-  const membro = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
-  if (!membro) {
-    return message.channel.send({
-      content: `<a:Bnao:746212123901820929> | ${message.author}, utilize o comando:\n> **Exemplo:** ${config.prefix}ban @usuário motivo`
-    });
-  }
-
-  if (membro.id === message.author.id) {
-    return message.channel.send({ embeds: [noPermEmbed] });
-  }
-
-  const motivo = args.slice(1).join(" ") || "Motivo não inserido";
-
-  const confirmEmbed = new EmbedBuilder()
-    .setAuthor({ name: `Confirme a ação a seguir:` })
-    .addFields(
-      { name: `🔸 Deseja realmente banir o usuário abaixo?`, value: `ㅤ${membro} (\`${membro.id}\`)` },
-      { name: `📄 Motivo inserido:`, value: `ㅤ${motivo}` }
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('ban')
+    .setDescription('Bane um usuário do servidor.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .addUserOption(option =>
+      option.setName('usuário').setDescription('Usuário para banir').setRequired(true)
     )
-    .setColor(`#8500de`)
-    .setFooter({ text: `Comando requisitado por: ${message.author.username}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) });
+    .addStringOption(option =>
+      option.setName('motivo').setDescription('Motivo do banimento').setRequired(false)
+    ),
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('confirm_ban')
-      .setLabel('✅ Confirmar')
-      .setStyle(ButtonStyle.Danger),
-    new ButtonBuilder()
-      .setCustomId('cancel_ban')
-      .setLabel('❌ Cancelar')
-      .setStyle(ButtonStyle.Secondary)
-  );
+  async execute(interaction) {
+    const target = interaction.options.getMember('usuário');
+    const motivo = interaction.options.getString('motivo') || 'Motivo não inserido';
+    const author = interaction.user;
 
-  const confirmMsg = await message.channel.send({ embeds: [confirmEmbed], components: [row] });
-
-  const collector = confirmMsg.createMessageComponentCollector({
-    componentType: ComponentType.Button,
-    time: 15000,
-    max: 1,
-    filter: i => i.user.id === message.author.id
-  });
-
-  collector.on('collect', async interaction => {
-    await interaction.deferUpdate();
-    if (interaction.customId === 'cancel_ban') {
-      await confirmMsg.delete();
-      return;
+    if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
+      return interaction.reply({
+        content: '❌ Eu preciso da permissão **Banir Membros** para executar esse comando.',
+        ephemeral: true
+      });
     }
 
-    const dmEmbed = new EmbedBuilder()
-      .setAuthor({ name: `Você foi banido | Asukie™` })
-      .setThumbnail(`https://media.discordapp.net/attachments/618150447261417492/626945093923766284/giphy_1.gif?width=453&height=453`)
-      .addFields(
-        {
-          name: `👤 Autor do banimento`,
-          value: `Tag: \`${message.author.tag}\`\nID: \`${message.author.id}\``,
-          inline: true
-        },
-        {
-          name: `📌 Servidor`,
-          value: `\`${message.guild.name}\``,
-          inline: true
-        },
-        {
-          name: `📄 Motivo`,
-          value: motivo
-        }
-      )
-      .setColor(`#8500de`);
-
-    const publicEmbed = new EmbedBuilder()
-      .setTitle(`Sistema de Punições | Asukie™`)
-      .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-      .addFields(
-        {
-          name: `👤 Usuário Banido`,
-          value: `Tag: \`${membro.user.tag}\`\nID: \`${membro.id}\``
-        },
-        {
-          name: `👮 Autor do Banimento`,
-          value: `Tag: \`${message.author.tag}\`\nID: \`${message.author.id}\``
-        },
-        {
-          name: `📄 Motivo`,
-          value: motivo
-        }
-      )
-      .setColor(`#8500de`);
-
-    try {
-      await membro.send({ embeds: [dmEmbed] }).catch(() => {});
-      await membro.ban({ reason: motivo });
-      await message.channel.send({ embeds: [publicEmbed] });
-    } catch (err) {
-      await message.channel.send(`❌ Erro ao tentar banir o usuário: ${err.message}`);
-    } finally {
-      await confirmMsg.delete();
+    if (!target) {
+      return interaction.reply({ content: '❌ Usuário não encontrado.', ephemeral: true });
     }
-  });
 
-  collector.on('end', collected => {
-    if (collected.size === 0) confirmMsg.delete().catch(() => {});
-  });
+    if (target.id === author.id || target.id === interaction.client.user.id) {
+      return interaction.reply({ content: '❌ Ação não permitida.', ephemeral: true });
+    }
+
+    const confirmEmbed = new EmbedBuilder()
+      .setAuthor({ name: 'Confirme a ação a seguir:' })
+      .addFields(
+        { name: `🔸 Deseja banir o usuário abaixo?`, value: `${target} (\`${target.id}\`)` },
+        { name: `📄 Motivo inserido:`, value: motivo }
+      )
+      .setColor('#8500de')
+      .setFooter({ text: `Comando requisitado por: ${author.tag}`, iconURL: author.displayAvatarURL({ dynamic: true }) });
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('confirm_ban')
+        .setLabel('✅ Confirmar')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId('cancel_ban')
+        .setLabel('❌ Cancelar')
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    await interaction.reply({ embeds: [confirmEmbed], components: [row], ephemeral: true });
+
+    const collector = interaction.channel.createMessageComponentCollector({
+      componentType: ComponentType.Button,
+      time: 15000,
+      max: 1,
+      filter: i => i.user.id === author.id
+    });
+
+    collector.on('collect', async i => {
+      await i.deferUpdate();
+
+      if (i.customId === 'cancel_ban') {
+        return interaction.editReply({
+          content: '❌ Banimento cancelado.',
+          embeds: [],
+          components: []
+        });
+      }
+
+      const dmEmbed = new EmbedBuilder()
+        .setAuthor({ name: `Você foi banido | Asukie™` })
+        .setThumbnail('https://media.discordapp.net/attachments/618150447261417492/626945093923766284/giphy_1.gif?width=453&height=453')
+        .addFields(
+          { name: `👤 Autor`, value: `\`${author.tag}\` (\`${author.id}\`)`, inline: true },
+          { name: `📌 Servidor`, value: `\`${interaction.guild.name}\``, inline: true },
+          { name: `📄 Motivo`, value: motivo }
+        )
+        .setColor('#8500de');
+
+      const publicEmbed = new EmbedBuilder()
+        .setTitle('Sistema de Punições | Asukie™')
+        .setThumbnail(author.displayAvatarURL({ dynamic: true }))
+        .addFields(
+          { name: `👤 Usuário Banido`, value: `\`${target.user.tag}\` (\`${target.id}\`)` },
+          { name: `👮 Autor`, value: `\`${author.tag}\` (\`${author.id}\`)` },
+          { name: `📄 Motivo`, value: motivo }
+        )
+        .setColor('#8500de');
+
+      try {
+        await target.send({ embeds: [dmEmbed] }).catch(() => {});
+        await target.ban({ reason: motivo });
+        await interaction.editReply({
+          content: '✅ Usuário banido com sucesso!',
+          embeds: [publicEmbed],
+          components: []
+        });
+      } catch (err) {
+        await interaction.editReply({
+          content: `❌ Ocorreu um erro ao tentar banir: ${err.message}`,
+          embeds: [],
+          components: []
+        });
+      }
+    });
+
+    collector.on('end', collected => {
+      if (collected.size === 0) {
+        interaction.editReply({
+          content: '⏱️ Tempo esgotado. Ação cancelada.',
+          embeds: [],
+          components: []
+        }).catch(() => {});
+      }
+    });
+  }
 };
