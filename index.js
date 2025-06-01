@@ -5,7 +5,8 @@ const {
   Partials,
   EmbedBuilder,
   ActivityType,
-  ChannelType
+  ChannelType,
+  Collection
 } = require("discord.js");
 const config = require("./config.json");
 const fs = require("fs");
@@ -29,6 +30,23 @@ const client = new Client({
     Partials.GuildMember
   ]
 });
+
+client.commands = new Collection();
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  if (command.name || command.run) {
+    client.commands.set(file.replace(".js", ""), command);
+  }
+}
+
+client.slashCommands = new Collection();
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  if (command.data && command.execute) {
+    client.slashCommands.set(command.data.name, command);
+  }
+}
 
 client.on("ready", () => {
   console.log(`Iniciado em ${client.user.tag}`);
@@ -63,34 +81,40 @@ client.on("ready", () => {
   console.log(`Usuários: ${client.users.cache.size}`);
 });
 
+// === Slash Command Handler ===
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const command = client.slashCommands.get(interaction.commandName);
+  if (!command) return;
+
+  try {
+    await command.execute(interaction);
+    console.log(`[SLASH] Comando /${interaction.commandName} executado por ${interaction.user.tag}`);
+  } catch (err) {
+    console.error(`[ERRO] Slash /${interaction.commandName}:`, err);
+    await interaction.reply({ content: '❌ Ocorreu um erro ao executar este comando.', ephemeral: true });
+  }
+});
+
 client.on("messageCreate", message => {
   if (
     message.author.bot ||
     message.channel.type === ChannelType.DM
   ) return;
 
-  // Embed se mencionado
   if (
     message.content.includes(`<@!${client.user.id}>`) ||
     message.content.includes(`<@${client.user.id}>`)
   ) {
     const embed = new EmbedBuilder()
       .setTitle(`**❓ | Está perdido(a), ${message.author.username}?**`)
-      .setDescription(`**➡️ Eu me chamo ${client.user.username} e sou um bot com várias funções, criado para ajudar o seu servidor! ✨**`)
-      .setThumbnail('https://cdn.discordapp.com/emojis/739200876752797697.png?v=1')
+      .setDescription(`**➡️ Eu me chamo ${client.user.username} e sou um bot com várias funções! ✨**`)
       .addFields(
-        {
-          name: `🔧 **| Meu prefixo:**`,
-          value: `\`${config.prefix}\``,
-          inline: true
-        },
-        {
-          name: `📘 **| Comando de ajuda:**`,
-          value: `\`${config.prefix}help\``,
-          inline: true
-        }
+        { name: `🔧 Prefixo:`, value: `\`${config.prefix}\``, inline: true },
+        { name: `📘 Ajuda:`, value: `\`${config.prefix}help\``, inline: true }
       )
-      .setFooter({ text: `${client.user.username}`, iconURL: client.user.displayAvatarURL({ dynamic: true }) })
+      .setThumbnail(client.user.displayAvatarURL())
       .setColor(`#8500de`)
       .setTimestamp();
 
@@ -103,15 +127,16 @@ client.on("messageCreate", message => {
   const command = args.shift().toLowerCase();
 
   try {
-    const commandFile = require(`./commands/${command}.js`);
+    const commandFile = client.commands.get(command);
+    if (!commandFile) return;
     commandFile.run(client, message, args);
     console.log(`[DEBUG] Comando '${command}' executado por ${message.author.tag}`);
   } catch (err) {
     console.error(`Erro ao executar comando '${command}':`, err);
     message.delete().catch(() => {});
   }
-  });
-  
+});
+
 console.log("[DEBUG] Tentando logar o bot...");
 client.login(process.env.DISCORD_TOKEN)
   .then(() => console.log("[DEBUG] Login realizado com sucesso"))
