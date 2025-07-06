@@ -2,7 +2,7 @@
 
 Asukie é uma bot desenvolvida com carinho desde 2020, nascida como um experimento pessoal e hoje transformada em um projeto de código aberto voltado para aprendizado, criatividade e comunidade.
 
-Este repositório contém o código-fonte completo da Asukie, compartilhado com o propósito de servir como base de estudos, customizações e novas ideias. Acreditamos que o conhecimento deve ser livre e acessível — e é por isso que a Asukie está aqui, aberta para quem quiser aprender com ela.
+Este repositório contém o código-fonte completo da Asukie, compartilhado com o propósito de servir como base de estudos, customizações e novas ideias. Acreditamos que o conhecimento deve ser livre e acessível e é por isso que a Asukie está aqui, aberta para quem quiser aprender com ela.
 
 ---
 
@@ -34,7 +34,7 @@ Desde sua criação, a Asukie evoluiu bastante. E como todo projeto que cresce c
 Este projeto é mantido com amor, mas não está em produção ativa.  
 Use como base, brinque, modifique, melhore. Só não esqueça de manter a essência.
 
-✨ Além disso, a **Asukie continua sendo atualizada aos poucos**, conforme eu, **Ivsson**, seu criador, vou modernizando os comandos antigos originalmente escritos para a versão **Discord.js v12** — ou seja, uma base já bastante desatualizada, mas cheia de potencial para aprendizado e renovação. Com paciência e dedicação, cada parte do bot vai ganhando uma nova vida.
+✨ Além disso, a **Asukie continua sendo atualizada aos poucos**, conforme eu vou modernizando os comandos antigos originalmente escritos para a versão **Discord.js v12** ou seja, uma base já bastante desatualizada, mas cheia de potencial para aprendizado e renovação. Com paciência e dedicação, cada parte do bot vai ganhando uma nova vida.
 
 ---
 
